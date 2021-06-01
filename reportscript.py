@@ -79,19 +79,33 @@ full['Week'] = full['Date'].dt.week
 # Deal with inconsistencies in Year and Month columns 
 full['CompetitionOpenSinceYear'].unique()
 full['CompetitionOpenSinceMonth'].unique()
-
+# Create new year and month variable and add it to full 
 datedf = full[['CompetitionOpenSinceYear', 'CompetitionOpenSinceMonth']]
 datedf = datedf.rename(columns={"CompetitionOpenSinceYear": "year", "CompetitionOpenSinceMonth": "month"})
 datedf['day'] = 1
 full['CompDate'] = pd.to_datetime(datedf)
+# Create months since variable 
+full['MonthsSinceComp'] = ((full.Date - full.CompDate)/np.timedelta64(1, 'M'))
+full['MonthsSinceComp'] = full['MonthsSinceComp'].round()
+# Check for negative values and how many there are 
+dates = []
+for value in full['MonthsSinceComp']:
+    if value < 0:
+        dates.append(value)
+len(dates)
+# Change negative values to 0 
+for index, value in full['MonthsSinceComp'].iteritems():
+    if value < 0:
+        full['MonthsSinceComp'][index] = 0
+(full['MonthsSinceComp'] < 0 ).any()
 
+# Look at realtionship between MonthsSinceComp and Sales and see if there is a need to move furhter with the variable 
+plt.scatter(full['Sales'], full['MonthsSinceComp'], s=1)
+full['MonthsSinceComp'].corr(full['Sales'])
+# No point continuing, there is very little realtion between the 2 variables
 
+# Use the MonthsSince variable to change distance to 0 if the comp isn't open yet 
+for index, value in full['MonthsSinceComp'].iteritems():
+    if value == 0:
+        full['CompetitionDistance'][index] = 0 
 
-
-d = {'col1': [1, 2], 'col2': [3, 4]}
-df = pd.DataFrame(data=d)
-df['col1']
-
-for index, value in df['col1'].iteritems():
-    if value == 1:
-        df['col1'][index] = np.NaN
