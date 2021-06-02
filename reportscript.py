@@ -116,3 +116,30 @@ full['Promo2SinceYear'].isnull().sum()
 for index, value in full['Promo2SinceWeek'].iteritems():
     if (np.isnan(value)) == True and full['Promo2'][index] != 0:
         print(value)
+
+# Combine PromoSinceWeek and PromoSinceYear to date varibale 
+full['Promo2SinceWeek'] = full['Promo2SinceWeek'].astype("Int64")
+full['Promo2SinceYear'] = full['Promo2SinceYear'].astype("Int64")
+
+full['Promo2SinceYear']
+from datetime import datetime
+
+def week_of_year_to_datetime(df):
+    year = df['Promo2SinceYear']
+    week = df['Promo2SinceWeek']
+    if pd.notnull(year) and pd.notnull(week):
+        datestring = str(year) + " " + str(week) + " 0"
+        return datetime.strptime(datestring, "%Y %W %w")
+    else:
+        return pd.NA
+
+full['PromoSince'] = full.apply(week_of_year_to_datetime, axis=1)
+full['PromoSince'] = pd.to_datetime(full['PromoSince']).dt.date
+full['PromoSince'] = pd.to_datetime(full['PromoSince'])
+
+# Create PromoLength 
+#full['PromoLength'] = ((full.Date - full.PromoSince)/np.timedelta64(1, 'M')).round()
+(full['PromoLength'] < 0 ).sum()
+
+full['PromoLength'] = (full.Date - full.PromoSince)
+
