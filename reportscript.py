@@ -109,3 +109,10 @@ for index, value in full['MonthsSinceComp'].iteritems():
     if value == 0:
         full['CompetitionDistance'][index] = 0 
 
+# Check that all values which are missing in PromoSinceWeek and PromoSinceYear and 0 in Promo2
+full['Promo2SinceWeek'].isnull().sum()
+full['Promo2SinceYear'].isnull().sum()
+
+for index, value in full['Promo2SinceWeek'].iteritems():
+    if (np.isnan(value)) == True and full['Promo2'][index] != 0:
+        print(value)
