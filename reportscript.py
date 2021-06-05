@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import math
 import numpy as np
 from datetime import datetime
+from scipy.stats import ttest_ind
 
 # Read in the data sets
 store = pd.read_csv('store.csv')
@@ -157,16 +158,13 @@ def week_of_year_to_datetime(df):
         datestring = str(year) + " " + str(week) + " 0"
         return datetime.strptime(datestring, "%Y %W %w")
     else:
-        return np.NaN
+        return pd.NA
 full['PromoSince'] = full.apply(week_of_year_to_datetime, axis=1)
 # Remove the time from the datetime
 full['PromoSince'] = pd.to_datetime(full['PromoSince']).dt.date
 full['PromoSince'] = pd.to_datetime(full['PromoSince'])
 # Create PromoLength - days since store started participating in Promo2 
 full['PromoLength'] = (full.Date - full.PromoSince)
-for index, value in full['PromoLength']:
-    if pd.notnull(value):
-        full['PromoLength'][index] = value.days
 # Extract just the days from the datetime 
 def get_days(df):
     timedays = df['PromoLength']
@@ -186,40 +184,45 @@ full['PromoLength'] = full['PromoLength'].astype('Int64')
 
 
 # Relitivise PromoInterval to current day 
-full['PromoInterval'].isnull().sum()
-def split_months(df):
-    months = df['PromoInterval']
-    if pd.notnull(months):
-        monlist = months.split(",")
-        return monlist 
-    else:
-        return np.NaN
-full['PromoInterval'] = full.apply(split_months, axis=1)
-sample2 = full.sample(10000)
-def give_sincecoupon(df):
-    dates = df['PromoInterval']
-    years = df['Year']
-    currentdate = df['Date']
-    if isinstance(dates, list):
-        datelist = []
-        datedifferences = []
-        for value in dates:
-            value = value.replace("Sept", "Sep")
-            date = '01' + value + str(years)
-            datelist.append(pd.to_datetime(datetime.strptime(date, '%d%b%Y')))
-        for value in datelist:
-            difference = (currentdate - value)
-            if difference.days >= 0:
-                datedifferences.append(difference.days)
-        if not datedifferences:
-            minval = -1 
-        else:
-            minval = min(datedifferences)
-        return minval
-    else:
-        return np.NaN
-full['SinceCoupon'] = full.apply(give_sincecoupon, axis=1)
+# full['PromoInterval'].isnull().sum()
+# def split_months(df):
+#     months = df['PromoInterval']
+#     if pd.notnull(months):
+#         monlist = months.split(",")
+#         return monlist 
+#     else:
+#         return np.NaN
+# full['PromoInterval'] = full.apply(split_months, axis=1)
+# sample2 = full.sample(10000)
+# def give_sincecoupon(df):
+#     dates = df['PromoInterval']
+#     years = df['Year']
+#     currentdate = df['Date']
+#     if isinstance(dates, list):
+#         datelist = []
+#         datedifferences = []
+#         for value in dates:
+#             value = value.replace("Sept", "Sep")
+#             date = '01' + value + str(years)
+#             datelist.append(pd.to_datetime(datetime.strptime(date, '%d%b%Y')))
+#         for value in datelist:
+#             difference = (currentdate - value)
+#             if difference.days >= 0:
+#                 datedifferences.append(difference.days)
+#         if not datedifferences:
+#             minval = -1 
+#         else:
+#             minval = min(datedifferences)
+#         return minval
+#     else:
+#         return np.NaN
+# full['SinceCoupon'] = full.apply(give_sincecoupon, axis=1)
 
+
+#Analyse the relationship between select variables and sales 
+fullcat = ['DayOfWeek', 'Promo2', 'Month', 'Year', 'Promo', 'StateHoliday', 'SchoolHoliday', 'StoreType', 'Assortment']
+for value in fullcat:
+    print(full['Sales'].groupby(full[value]).sum())
 
 # Relaitionships between variables and Sales 
 # DaysSinceComp and Sales and see if there is a need to move furhter with the variable 
