@@ -219,27 +219,44 @@ full['PromoLength'] = full['PromoLength'].astype('Int64')
 # full['SinceCoupon'] = full.apply(give_sincecoupon, axis=1)
 
 
-#Analyse the relationship between select variables and sales 
+# Relaitionships between variables and Sales 
+#Analyse the relationship between cat variables and sales 
 fullcat = ['DayOfWeek', 'Promo2', 'Month', 'Year', 'Promo', 'StateHoliday', 'SchoolHoliday', 'StoreType', 'Assortment']
 for value in fullcat:
     print(full['Sales'].groupby(full[value]).sum())
 
-# Relaitionships between variables and Sales 
-# DaysSinceComp and Sales and see if there is a need to move furhter with the variable 
-plt.scatter(full['Sales'], full['DaysSinceComp'], s=1)
-full['DaysSinceComp'].corr(full['Sales'])
-# No point continuing, there is very little realtion between the 2 variables
+#Analyse the relationship between num variables and sales 
 
+# Competition Distance 
+plt.scatter(full['CompetitionDistance'], full['Sales'])
+full['Sales'].corr(full['CompetitionDistance'])
+# Plot without the outliers 
+plt.scatter(full['CompetitionDistance'][full['CompetitionDistance'] < 50000], full['Sales'][full['CompetitionDistance'] < 50000], s=0.5)
+
+# DaysSinceComp
+# DaysSinceComp and Sales and see if there is a need to move furhter with the variable 
+plt.scatter(full['DaysSinceComp'], full['Sales'], s=0.5)
+full['Sales'].corr(full['DaysSinceComp'])
+# Hard to see when there are such big outliers in the days since comp, remove these and plot again
+plt.scatter(full['DaysSinceComp'][full['DaysSinceComp'] < 12500], full['Sales'][full['DaysSinceComp'] < 12500], s=0.5)
+(full['Sales'][full['DaysSinceComp'] < 12500]).corr(full['DaysSinceComp'][full['DaysSinceComp'] < 12500])
+
+# PromoLength
 # Look at realtionship between PromoLength and Sales and see if there is a need to move furhter with the variable 
-sample = full.sample(10000)
-plt.scatter(sample['PromoLength'].astype('float'), sample['Sales'].astype('float'), s=1)
+plt.scatter(full['PromoLength'].astype('float'), full['Sales'].astype('float'), s=1)
 full['PromoLength'].astype('float').corr(full['Sales'].astype('float'))
 # No point continuing, there is very little realtion between the 2 variables
 
 
 # Deal with missing values (of those which realte to sales)
 full.isnull().sum()
-
+final = full.iloc[:, [3, 1, 4, 5, 6, 7, 8, 9, 10, 13, 17, 18]]
+final.isnull().sum()
+# The only value with missing information is CompetitionDistance 
+plt.hist(final['CompetitionDistance'], bins=25)
+plt.hist(np.log(final['CompetitionDistance']), bins=25)
+final['CompetitionDistance'] = final['CompetitionDistance'].replace(np.nan, final['CompetitionDistance'].median())
+final['CompDistLog'] = np.log(final['CompetitionDistance'])
 
 # Creating the dataset 
 
