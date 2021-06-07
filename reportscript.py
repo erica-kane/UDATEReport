@@ -5,6 +5,8 @@ import math
 import numpy as np
 from datetime import datetime
 from scipy.stats import ttest_ind
+from sklearn.ensemble import RandomForestRegressor
+from sklearn import metrics
 
 # Read in the data sets
 store = pd.read_csv('store.csv')
@@ -259,6 +261,58 @@ final['CompetitionDistance'] = final['CompetitionDistance'].replace(np.nan, fina
 final['CompDistLog'] = np.log(final['CompetitionDistance'])
 
 # Creating the dataset 
-
+# Just categorical variables 
+final = final.replace({'Open' : { 0 : 'Closed', 1 : 'Open'}})
+final = final.replace({'Promo' : { 0 : 'Store not participating', 1 : 'Store participating'}})
+final = final.replace({'Promo2' : { 0 : 'Store not participating', 1 : 'Store participating'}})
+final = final.replace({'SchoolHoliday' : { 0 : 'Not affected', 1 : 'Affected'}})
+final = final.replace({'Month' : { 1 : 'January', 2 : 'February', 3 : 'March', 4 : 'April', 5 : 'May',\
+    6 : 'June', 7 : 'July', 8 : 'August', 9 : 'September', 10 : 'October', 11 : 'November', 12 : 'December'}})
+final = final.replace({'Year' : { 2013 : '2013', 2014 : '2014', 2015 : '2015'}})
+cat = ['DayOfWeek', 'Open', 'Promo', 'StateHoliday', 'SchoolHoliday', 'StoreType', 'Assortment', 'Promo2',\
+    'Month', 'Year']
+cat_dum = pd.get_dummies(final[cat])
+# Create a list of base categories to drop 
+cat_drop = ['DayOfWeek_Monday', 'Open_Closed', 'Promo_Store not participating', 'StateHoliday_None', \
+            'SchoolHoliday_Not affected', 'StoreType_a', 'Assortment_Basic', 'Promo2_Store not participating', \
+            'Month_January', 'Year_2013']
+# Create a list of continious variables without sales 
+cont_log = ['CompDistLog']
+cont = ['CompetitionDistance']
+# Create a dataset
+X_log = pd.concat([final[cont_log], cat_dum.drop(cat_dum[cat_drop],axis=1)], axis=1)
+X = pd.concat([final[cont], cat_dum.drop(cat_dum[cat_drop],axis=1)], axis=1)
 
 # Model
+# Create the regressor (RF in this case) with log comp distance 
+rf_log = RandomForestRegressor(n_estimators=50, max_features=None)
+# Fit to the X (the dataset) and y (Sales)
+rf_log.fit(X_log, final['Sales'])
+# Predict trust
+rf_log_lbls = pd.Series(rf_log.predict(X_log))
+# Create the regressor (RF in this case) with comp distance 
+rf = RandomForestRegressor(n_estimators=50, max_features=None)
+# Fit to the X (the dataset) and y (Sales)
+rf.fit(X, final['Sales'])
+# Predict trust
+rf_lbls = pd.Series(rf.predict(X))
+# Summaries of labels compared to true sales 
+for label, series in [('RF',rf_lbls), ('RF Log Comp Dist', rf_log_lbls), ('True Sales', final['Sales'])]:
+    print(label)
+    print(series.describe())
+# Plot 
+plt.hist(final['Sales'], bins=20)
+plt.hist(rf_lbls, bins=20)
+plt.hist(rf_log_lbls, bins=20)
+# Evaluate performance - in sample 
+def make_scoring_series(score_fn):
+    return pd.Series({'RF': score_fn(final['Sales'], rf_lbls),
+                      'RF Log CompDist': score_fn(final['Sales'], rf_log_lbls)})
+
+# Use the function and save results 
+r2 = make_scoring_series(metrics.r2_score)
+mse = make_scoring_series(metrics.mean_squared_error)
+noncv_scres = pd.DataFrame({'MSE': mse,
+                           'R2': r2,
+                           'CV': 'Not cross validated'})
+
