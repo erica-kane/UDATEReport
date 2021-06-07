@@ -78,7 +78,7 @@ for index, value in full['CompetitionOpenSinceYear'].iteritems():
 
 
 # Check distribution of competition distance for outliers 
-full['CompetitionDistance'].describe()
+pd.DataFrame(full['CompetitionDistance'].describe())
 plt.hist(full['CompetitionDistance'], bins=20)
 (full['Store'][full['CompetitionDistance'] > 55000]).unique()
 
