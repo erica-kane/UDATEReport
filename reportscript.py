@@ -7,6 +7,9 @@ from datetime import datetime
 from scipy.stats import ttest_ind
 from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_validate
+import seaborn as sns
 
 # Read in the data sets
 store = pd.read_csv('store.csv')
@@ -34,13 +37,14 @@ closed = full[full['Open'] == 0]
 full['Sales'].describe()
 plt.hist(full['Sales'], bins=20)
 # The highest sales and largest amount of customers frequently lie in store 262 - may not be outliers just a large busy store 
-full[full['Sales'] > 35000]
+full[full['Sales'] > 30000]
 # Store 909 has highest sales - look at the distribution of its other sales to see if it is fitting
 (full['Sales'][full['Store'] == 909]).describe()
 (full['Sales'][full['Store'] == 57]).describe()
 (full['Sales'][full['Store'] == 817]).describe()
 full = full.drop([full.index[51506] , full.index[827591]])
-plt.hist(full['Sales'], bins=20)
+plt.hist(full['Sales'], bins=25)
+plt.savefig('Figure1')
 
 
 # Check all dates are within the years 
@@ -78,7 +82,7 @@ for index, value in full['CompetitionOpenSinceYear'].iteritems():
 
 
 # Check distribution of competition distance for outliers 
-pd.DataFrame(full['CompetitionDistance'].describe())
+pd.DataFrame(store['CompetitionDistance'].describe())
 plt.hist(full['CompetitionDistance'], bins=20)
 (full['Store'][full['CompetitionDistance'] > 55000]).unique()
 
@@ -93,7 +97,7 @@ full = full.replace({'DayOfWeek' : { 1 : 'Monday', 2 : 'Tuesday', 3 : 'Wednesday
 full['DayOfWeek'].unique()
 
 
-# Deal with holiday variables (drop state holidays because it's really just a proxy for open/closed)
+# Deal with holiday variables 
 holiday = full[full['StateHoliday'] != 'None']
 holiday[holiday['Open'] == 1]
 #full = full.drop(columns=['StateHoliday'])
@@ -227,14 +231,12 @@ fullcat = ['DayOfWeek', 'Promo2', 'Month', 'Year', 'Promo', 'StateHoliday', 'Sch
 for value in fullcat:
     print(full['Sales'].groupby(full[value]).sum())
 
-#Analyse the relationship between num variables and sales 
-
+#Analyse the relationship between cont variables and sales 
 # Competition Distance 
 plt.scatter(full['CompetitionDistance'], full['Sales'])
 full['Sales'].corr(full['CompetitionDistance'])
 # Plot without the outliers 
 plt.scatter(full['CompetitionDistance'][full['CompetitionDistance'] < 50000], full['Sales'][full['CompetitionDistance'] < 50000], s=0.5)
-
 # DaysSinceComp
 # DaysSinceComp and Sales and see if there is a need to move furhter with the variable 
 plt.scatter(full['DaysSinceComp'], full['Sales'], s=0.5)
@@ -242,12 +244,32 @@ full['Sales'].corr(full['DaysSinceComp'])
 # Hard to see when there are such big outliers in the days since comp, remove these and plot again
 plt.scatter(full['DaysSinceComp'][full['DaysSinceComp'] < 12500], full['Sales'][full['DaysSinceComp'] < 12500], s=0.5)
 (full['Sales'][full['DaysSinceComp'] < 12500]).corr(full['DaysSinceComp'][full['DaysSinceComp'] < 12500])
-
 # PromoLength
 # Look at realtionship between PromoLength and Sales and see if there is a need to move furhter with the variable 
 plt.scatter(full['PromoLength'].astype('float'), full['Sales'].astype('float'), s=1)
 full['PromoLength'].astype('float').corr(full['Sales'].astype('float'))
 # No point continuing, there is very little realtion between the 2 variables
+
+all_cont = pd.DataFrame({'Competition Distance': full['CompetitionDistance'],\
+    'Days Since Comp': full['DaysSinceComp'],\
+        'Promo Length': full['PromoLength'],\
+            'Sales': full['Sales']})
+
+# Plot 2x2 scatter plots of all these predictions against trust 
+f, axs = plt.subplots(2, 2, figsize=(12, 12))
+axs = axs.flatten()
+# Use a loop, enumerate returns the index and value 
+for i, m in enumerate(all_cont.columns.drop('Sales')):
+    # Plot on index value (0-3)
+    ax = axs[i]
+    # Plot x = truth and y = the predicted values 
+    sns.regplot('Sales', 
+                m, 
+                all_cont,
+                ci=None,
+                scatter_kws={'s':2},
+                ax=ax)
+
 
 
 # Deal with missing values (of those which realte to sales)
@@ -302,12 +324,19 @@ for label, series in [('RF',rf_lbls), ('RF Log Comp Dist', rf_log_lbls), ('True 
     print(series.describe())
 # Plot 
 plt.hist(final['Sales'], bins=20)
-plt.hist(rf_lbls, bins=20)
+#plt.hist(rf_lbls, bins=20)
 plt.hist(rf_log_lbls, bins=20)
+
+plt.hist(final['Sales'], bins=25, alpha=0.2, label='True Sales')
+plt.hist(rf_log_lbls, bins=25, alpha=0.2, label='Predicted Sales')
+plt.legend(loc='upper right')
+plt.show()
+
 # Evaluate performance - in sample 
 def make_scoring_series(score_fn):
     return pd.Series({'RF': score_fn(final['Sales'], rf_lbls),
                       'RF Log CompDist': score_fn(final['Sales'], rf_log_lbls)})
+
 
 # Use the function and save results 
 r2 = make_scoring_series(metrics.r2_score)
@@ -316,3 +345,15 @@ noncv_scres = pd.DataFrame({'MSE': mse,
                            'R2': r2,
                            'CV': 'Not cross validated'})
 
+rf_cv = RandomForestRegressor(n_estimators=50, max_features=None)
+cv = cross_validate(rf_cv, X_log, final['Sales'], cv=5, scoring=['neg_mean_squared_error', 'r2'])
+-1*cv['test_neg_mean_squared_error'].mean()
+cv['test_r2'].mean()
+
+# Predict for test 
+testX = pd.read_csv('testX.csv')
+rf_test = RandomForestRegressor(n_estimators=50, max_features=None)
+rf_test.fit(X_log, final['Sales'])
+test_lbls = pd.Series(rf_test.predict(testX))
+plt.hist(test_lbls, bins=20)
+test_lbls.describe()
