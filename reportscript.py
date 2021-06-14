@@ -37,7 +37,7 @@ closed = full[full['Open'] == 0]
 full['Sales'].describe()
 plt.hist(full['Sales'], bins=20)
 # The highest sales and largest amount of customers frequently lie in store 262 - may not be outliers just a large busy store 
-full[full['Sales'] > 30000]
+full[full['Sales'] > 36000]
 # Store 909 has highest sales - look at the distribution of its other sales to see if it is fitting
 (full['Sales'][full['Store'] == 909]).describe()
 (full['Sales'][full['Store'] == 57]).describe()
@@ -134,7 +134,7 @@ full['DaysSinceComp'] = full.apply(get_days, axis=1)
 # Change negative values to 0 
 for index, value in full['DaysSinceComp'].iteritems():
     if value < 0:
-        full['DaysSinceComp'][index] = 20000
+        full['DaysSinceComp'][index] = -1
 (full['DaysSinceComp'] > 20000 ).any()
 (full['DaysSinceComp'] == 20000 ).sum()
 
@@ -233,13 +233,15 @@ for value in fullcat:
 
 #Analyse the relationship between cont variables and sales 
 # Competition Distance 
-plt.scatter(full['CompetitionDistance'], full['Sales'])
+plt.scatter(full['CompetitionDistance'], full['Sales'], s=1)
+plt.savefig('Figure2-1')
 full['Sales'].corr(full['CompetitionDistance'])
 # Plot without the outliers 
 plt.scatter(full['CompetitionDistance'][full['CompetitionDistance'] < 50000], full['Sales'][full['CompetitionDistance'] < 50000], s=0.5)
 # DaysSinceComp
 # DaysSinceComp and Sales and see if there is a need to move furhter with the variable 
-plt.scatter(full['DaysSinceComp'], full['Sales'], s=0.5)
+plt.scatter(full['DaysSinceComp'], full['Sales'], s=1)
+plt.savefig('Figure2-2')
 full['Sales'].corr(full['DaysSinceComp'])
 # Hard to see when there are such big outliers in the days since comp, remove these and plot again
 plt.scatter(full['DaysSinceComp'][full['DaysSinceComp'] < 12500], full['Sales'][full['DaysSinceComp'] < 12500], s=0.5)
@@ -247,6 +249,7 @@ plt.scatter(full['DaysSinceComp'][full['DaysSinceComp'] < 12500], full['Sales'][
 # PromoLength
 # Look at realtionship between PromoLength and Sales and see if there is a need to move furhter with the variable 
 plt.scatter(full['PromoLength'].astype('float'), full['Sales'].astype('float'), s=1)
+plt.savefig('Figure2-3')
 full['PromoLength'].astype('float').corr(full['Sales'].astype('float'))
 # No point continuing, there is very little realtion between the 2 variables
 
@@ -269,6 +272,8 @@ for i, m in enumerate(all_cont.columns.drop('Sales')):
                 ci=None,
                 scatter_kws={'s':2},
                 ax=ax)
+
+plt.savefig('Figure2')
 
 
 
@@ -330,7 +335,9 @@ plt.hist(rf_log_lbls, bins=20)
 plt.hist(final['Sales'], bins=25, alpha=0.2, label='True Sales')
 plt.hist(rf_log_lbls, bins=25, alpha=0.2, label='Predicted Sales')
 plt.legend(loc='upper right')
-plt.show()
+#plt.show()
+plt.savefig('Figure3')
+
 
 # Evaluate performance - in sample 
 def make_scoring_series(score_fn):
